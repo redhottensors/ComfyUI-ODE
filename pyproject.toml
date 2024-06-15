@@ -1,0 +1,16 @@
+[project]
+name = "ComfyUI-ODE"
+description = "ODE Solvers for ComfyUI\nThis node enables use of torchdiffeq ODE solvers with models.  Intended for use with Stable Diffusion 3 and similar flow models."
+version = "0.0.1"
+license = "LICENSE"
+dependencies = [
+  "torchdiffeq"
+]
+
+[project.urls]
+Repository = "https://github.com/redhottensors/ComfyUI-ODE"
+
+[tool.comfy]
+PublisherId = "redhottensors"
+DisplayName = "ComfyUI-ODE"
+Icon = ""
