@@ -23,6 +23,7 @@ class ODEFunction:
 
         y = y.unsqueeze(0)
         denoised = self.model(y, (1.0 - t).unsqueeze(0), **self.extra_args)
+        self._callback(t, denoised.squeeze(0))
         return (y.squeeze(0) - denoised.squeeze(0)) / (t - 1.0)
 
     def _callback(self, t0, y0):
