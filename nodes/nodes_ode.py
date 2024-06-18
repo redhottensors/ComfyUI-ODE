@@ -76,7 +76,11 @@ class ODESampler:
                 rtol=self.rtol,
                 atol=self.atol,
                 method=self.solver,
-                options={ "min_step": 1e-5, "max_num_steps": self.max_steps }
+                options={
+                    "min_step": 1e-5,
+                    "max_num_steps": self.max_steps,
+                    "dtype": torch.float32 if torch.backends.mps.is_available() else torch.float64
+                }
             )[-1]
 
         if callback is not None:
