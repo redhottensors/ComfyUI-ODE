@@ -3,33 +3,35 @@ import torch
 import torchdiffeq
 from tqdm.auto import trange, tqdm
 
-ADAPTIVE_SOLVERS = { "euler", "midpoint", "rk4", "heun3", "explicit_adams", "implicit_adams" }
-FIXED_SOLVERS = { "dopri8", "dopri5", "bosh3", "fehlberg2", "adaptive_heun" }
+FIXED_SOLVERS = { "euler", "midpoint", "rk4", "heun3", "explicit_adams", "implicit_adams" }
+ADAPTIVE_SOLVERS = { "dopri8", "dopri5", "bosh3", "fehlberg2", "adaptive_heun" }
 SOLVERS = [ *ADAPTIVE_SOLVERS, *FIXED_SOLVERS ]
 SOLVERS.sort()
 
 class ODEFunction:
-    def __init__(self, model, n_steps, is_adaptive=False, extra_args=None, callback=None):
+    def __init__(self, model, n_steps, is_adaptive=False, extra_args=None, sigma_max=1.0, callback=None):
         self.model = model
         self.extra_args = {} if extra_args is None else extra_args
         self.callback = callback
         self.n_steps = n_steps
         self.is_adaptive = is_adaptive
+        self.sigma_max = sigma_max
         self.pbar = tqdm(total=1.0 if is_adaptive else n_steps, leave=False, position=1)
 
     def __call__(self, t, y):
-        if t > (1.0 - 1e-5):
+        sigma = self.sigma_max - t
+        if sigma < 1e-05:
             return torch.zeros_like(y)
 
         y = y.unsqueeze(0)
-        denoised = self.model(y, (1.0 - t).unsqueeze(0), **self.extra_args)
-        return (y.squeeze(0) - denoised.squeeze(0)) / (t - 1.0)
+        denoised = self.model(y, sigma.unsqueeze(0), **self.extra_args)
+        return (y.squeeze(0) - denoised.squeeze(0)) / -sigma
 
     def _callback(self, t0, y0):
         if self.callback is not None:
             fake_step = round(t0.item() * self.n_steps)
             y0 = y0.unsqueeze(0)
-            sigma = 1.0 - t0
+            sigma = self.sigma_max - t0
 
             self.callback({
                 "x": y0,
@@ -46,7 +48,7 @@ class ODEFunction:
 
     def callback_accept_step(self, t0, y0, dt):
         if self.is_adaptive:
-            self.pbar.update(dt.item())
+            self.pbar.update(dt.item() / self.sigma_max)
             self._callback(t0, y0)
 
 class ODESampler:
@@ -58,14 +60,11 @@ class ODESampler:
 
     @torch.no_grad()
     def __call__(self, model, x: torch.Tensor, sigmas: torch.Tensor, extra_args=None, callback=None, disable=None):
-        if self.solver in FIXED_SOLVERS:
-            t = 1.0 - sigmas
-            is_adaptive = False
-        else:
-            t = torch.stack([1.0 - sigmas.max(), 1.0 - sigmas.min()])
-            is_adaptive = True
+        is_adaptive = self.solver in ADAPTIVE_SOLVERS
+        sigma_max = sigmas.max()
+        t = torch.stack((sigmas.min(), sigma_max)) if is_adaptive else sigma_max - sigmas
 
-        ode = ODEFunction(model, n_steps=len(sigmas), is_adaptive=is_adaptive, callback=callback, extra_args=extra_args)
+        ode = ODEFunction(model, n_steps=len(sigmas), is_adaptive=is_adaptive, callback=callback, sigma_max=sigma_max.item(), extra_args=extra_args)
 
         samples = torch.empty_like(x)
         for i in trange(x.shape[0], disable=disable):
@@ -104,7 +103,7 @@ class ODESamplerSelect:
                 "solver": (SOLVERS, { "default": "bosh3" }),
                 "log_relative_tolerance": ("FLOAT", { "min": -7, "max": 0, "default": -2.5, "step": 0.1 }),
                 "log_absolute_tolerance": ("FLOAT", { "min": -7, "max": 0, "default": -3.5, "step": 0.1 }),
-                "max_steps": ("INT", { "min": 1, "max": 150, "default": 30, "step": 1 }),
+                "max_steps": ("INT", { "min": 1, "max": 500, "default": 30, "step": 1 }),
             }
         }
 
