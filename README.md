@@ -5,7 +5,7 @@ This is an ALPHA release using [torchdiffeq](https://github.com/rtqichen/torchdi
 
 When time permits, a custom batched RK solver will be written and fixed-step methods will be deprecated.
 
-This node only supports ODE flow models like Stable Diffusion 3.
+This node supports all models, but is intended for use with ODE flow models like Stable Diffusion 3.
 
 # Installation
 Clone this repo into ``ComfyUI/custom_nodes`` or use [ComfyUI-Manager](https://github.com/ltdrdata/ComfyUI-Manager).
@@ -16,9 +16,10 @@ In your ComfyUI virtual environment, run ``pip install torchdiffeq``.
 
 The ODE Solver node is available at <ins>sampling > custom_sampling > samplers > ODE Solver</ins>.
 
-The choice of scheduler will generally make no difference, since the adaptive solvers only take a start point and an end point, and those should always be 1 and 0 respectively for SD3.  To keep things simple, just use sgm_uniform.
+The choice of scheduler will generally make no difference, since the adaptive solvers only take a start point and an end point, and those should always be 1 and 0 respectively for SD3. To keep things simple, just use ``sgm_uniform``.
 
-Similar to DPM Adaptive, these solvers will choose how many steps to use and how far those steps will go on their own, based on the tolerances set (more information below).  max_steps will not control how many steps the solvers take on their own, and it instead is provided as a failsafe so you don't end up having to wait for a very long solve if you accidentally set tolerances too low.
+Similar to DPM Adaptive, these solvers will choose how many steps to use and how far those steps will go on their own, based on the tolerances set (more information below).
+``max_steps`` will not control how many steps the solvers take on their own, and it instead is provided as a failsafe so you don't have to wait for a very long solve if your tolerances are too low.
 
 Here's some suggested starting points to try out the adaptive solvers.
 
