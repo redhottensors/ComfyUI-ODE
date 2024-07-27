@@ -2,7 +2,7 @@
 name = "ComfyUI-ODE"
 description = "ODE Solvers for ComfyUI\nThis node enables use of torchdiffeq ODE solvers with models.  Intended for use with Stable Diffusion 3 and similar flow models."
 version = "0.0.1"
-license = "LICENSE"
+license = { file = "LICENSE" }
 dependencies = [
   "torchdiffeq"
 ]
